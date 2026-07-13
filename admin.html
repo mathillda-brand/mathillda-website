@@ -44,8 +44,6 @@
   }
   button.secondary { background: #999; }
   button.danger { background: #b03a2e; }
-  .lang-row { display: flex; gap: 8px; align-items: center; margin-top: 8px; }
-  .lang-row span { width: 32px; font-size: 12px; font-weight: 700; color: #888; }
   .status { font-size: 13px; margin-top: 8px; padding: 8px; border-radius: 6px; }
   .status.ok { background: #e2f4e6; color: #256b37; }
   .status.err { background: #fbe4e1; color: #92271b; }
@@ -58,6 +56,7 @@
     margin-bottom: 10px;
   }
   .item img { width: 100%; border-radius: 6px; margin-bottom: 8px; }
+  .item .meta { font-size: 13px; color: #555; margin-bottom: 4px; }
   #loginBox { max-width: 320px; margin: 60px auto; }
   #appBox { display: none; }
 </style>
@@ -90,13 +89,15 @@
     <label>Fiyat (EUR)</label>
     <input type="number" id="price" placeholder="0.00" step="0.01">
 
-    <label>Japonca (manuel — DeepL desteklemiyor)</label>
-    <input type="text" id="nameJA" placeholder="日本語名 (opsiyonel)">
-    <textarea id="contentJA" placeholder="日本語の説明 (opsiyonel)"></textarea>
+    <label>Japonca Ad (manuel — DeepL desteklemiyor, opsiyonel)</label>
+    <input type="text" id="nameJA" placeholder="日本語名">
+    <label>Japonca Açıklama (opsiyonel)</label>
+    <textarea id="contentJA" placeholder="日本語の説明"></textarea>
 
-    <label>Arapça (manuel — DeepL desteklemiyor)</label>
-    <input type="text" id="nameAR" placeholder="الاسم بالعربية (opsiyonel)">
-    <textarea id="contentAR" placeholder="الوصف بالعربية (opsiyonel)"></textarea>
+    <label>Arapça Ad (manuel — DeepL desteklemiyor, opsiyonel)</label>
+    <input type="text" id="nameAR" placeholder="الاسم بالعربية">
+    <label>Arapça Açıklama (opsiyonel)</label>
+    <textarea id="contentAR" placeholder="الوصف بالعربية"></textarea>
 
     <button onclick="saveImage()">Kaydet ve Otomatik Çevir</button>
     <div id="saveStatus"></div>
@@ -112,12 +113,17 @@ const SUPABASE_KEY = "sb_publishable_Q24NDXCNYJG87Io8Wb2l4g_fOvnaKJD";
 const TRANSLATE_FN = "https://olzohyonqioucwtnkfya.supabase.co/functions/v1/translate";
 const ADMIN_PASSWORD = "mathillda2026";
 
-const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+let supabase = null;
 
 function checkPassword() {
   const val = document.getElementById('pwInput').value;
   const statusEl = document.getElementById('loginStatus');
   if (val === ADMIN_PASSWORD) {
+    if (!window.supabase) {
+      statusEl.innerHTML = '<div class="status err">Supabase kütüphanesi yüklenemedi. Sayfayı yenileyin.</div>';
+      return;
+    }
+    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     document.getElementById('loginBox').style.display = 'none';
     document.getElementById('appBox').style.display = 'block';
     loadImages();
@@ -161,7 +167,7 @@ async function saveImage() {
   const file = fileInput.files[0];
   const nameTR = document.getElementById('nameTR').value.trim();
   const contentTR = document.getElementById('contentTR').value.trim();
-  const price = document.getElementById('price').value;
+  const priceVal = document.getElementById('price').value;
   const nameJA = document.getElementById('nameJA').value.trim();
   const contentJA = document.getElementById('contentJA').value.trim();
   const nameAR = document.getElementById('nameAR').value.trim();
@@ -175,10 +181,10 @@ async function saveImage() {
   statusEl.innerHTML = '<div class="status info">Görsel yükleniyor...</div>';
 
   try {
-    // 1. Upload image to Storage
     const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}.${fileExt}`;
-    const { data: uploadData, error: uploadError } = await supabase
+    const fileName = Date.now() + '.' + fileExt;
+
+    const { error: uploadError } = await supabase
       .storage
       .from('images')
       .upload(fileName, file);
@@ -191,33 +197,122 @@ async function saveImage() {
     const { data: urlData } = supabase.storage.from('images').getPublicUrl(fileName);
     const publicUrl = urlData.publicUrl;
 
-    statusEl.innerHTML = '<div class="status info">Çevriliyor: DE...</div>';
+    statusEl.innerHTML = '<div class="status info">Çevriliyor: Almanca...</div>';
     const nameDE = await translateText(nameTR, 'DE');
     const contentDE = await translateText(contentTR, 'DE');
 
-    statusEl.innerHTML = '<div class="status info">Çevriliyor: EN...</div>';
+    statusEl.innerHTML = '<div class="status info">Çevriliyor: İngilizce...</div>';
     const nameEN = await translateText(nameTR, 'EN');
     const contentEN = await translateText(contentTR, 'EN');
 
-    statusEl.innerHTML = '<div class="status info">Çevriliyor: FR...</div>';
+    statusEl.innerHTML = '<div class="status info">Çevriliyor: Fransızca...</div>';
     const nameFR = await translateText(nameTR, 'FR');
     const contentFR = await translateText(contentTR, 'FR');
 
-    statusEl.innerHTML = '<div class="status info">Çevriliyor: IT...</div>';
+    statusEl.innerHTML = '<div class="status info">Çevriliyor: İtalyanca...</div>';
     const nameIT = await translateText(nameTR, 'IT');
     const contentIT = await translateText(contentTR, 'IT');
 
-    statusEl.innerHTML = '<div class="status info">Çevriliyor: ES...</div>';
+    statusEl.innerHTML = '<div class="status info">Çevriliyor: İspanyolca...</div>';
     const nameES = await translateText(nameTR, 'ES');
     const contentES = await translateText(contentTR, 'ES');
 
-    statusEl.innerHTML = '<div class="status info">Çevriliyor: RU...</div>';
+    statusEl.innerHTML = '<div class="status info">Çevriliyor: Rusça...</div>';
     const nameRU = await translateText(nameTR, 'RU');
     const contentRU = await translateText(contentTR, 'RU');
 
     statusEl.innerHTML = '<div class="status info">Kaydediliyor...</div>';
 
+    const price = priceVal ? parseFloat(priceVal) : null;
+
     const { error: insertError } = await supabase.from('images').insert({
       url: publicUrl,
       name_tr: nameTR, content_tr: contentTR,
-      name_de: n
+      name_de: nameDE, content_de: contentDE,
+      name_en: nameEN, content_en: contentEN,
+      name_fr: nameFR, content_fr: contentFR,
+      name_it: nameIT, content_it: contentIT,
+      name_es: nameES, content_es: contentES,
+      name_ru: nameRU, content_ru: contentRU,
+      name_ja: nameJA || null, content_ja: contentJA || null,
+      name_ar: nameAR || null, content_ar: contentAR || null,
+      price: price
+    });
+
+    if (insertError) {
+      statusEl.innerHTML = '<div class="status err">Kayıt hatası: ' + insertError.message + '</div>';
+      return;
+    }
+
+    statusEl.innerHTML = '<div class="status ok">Başarıyla kaydedildi ve 7 dile çevrildi.</div>';
+
+    document.getElementById('fileInput').value = '';
+    document.getElementById('preview').style.display = 'none';
+    document.getElementById('nameTR').value = '';
+    document.getElementById('contentTR').value = '';
+    document.getElementById('price').value = '';
+    document.getElementById('nameJA').value = '';
+    document.getElementById('contentJA').value = '';
+    document.getElementById('nameAR').value = '';
+    document.getElementById('contentAR').value = '';
+
+    loadImages();
+
+  } catch (err) {
+    statusEl.innerHTML = '<div class="status err">Beklenmeyen hata: ' + err.message + '</div>';
+  }
+}
+
+async function loadImages() {
+  const listEl = document.getElementById('imageList');
+  listEl.innerHTML = 'Yükleniyor...';
+
+  const { data, error } = await supabase
+    .from('images')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    listEl.innerHTML = '<div class="status err">Yükleme hatası: ' + error.message + '</div>';
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    listEl.innerHTML = '<div class="status info">Henüz görsel eklenmedi.</div>';
+    return;
+  }
+
+  listEl.innerHTML = '';
+  data.forEach(function(item) {
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.innerHTML =
+      '<img src="' + item.url + '">' +
+      '<div class="meta"><strong>' + (item.name_tr || '') + '</strong></div>' +
+      '<div class="meta">' + (item.content_tr || '') + '</div>' +
+      '<div class="meta">Fiyat: ' + (item.price !== null ? item.price + ' €' : '—') + '</div>' +
+      '<button class="danger" onclick="deleteImage(' + item.id + ', \'' + item.url + '\')">Sil</button>';
+    listEl.appendChild(div);
+  });
+}
+
+async function deleteImage(id, url) {
+  if (!confirm('Bu görseli silmek istediğine emin misin?')) return;
+
+  const fileName = url.split('/').pop();
+
+  await supabase.storage.from('images').remove([fileName]);
+
+  const { error } = await supabase.from('images').delete().eq('id', id);
+
+  if (error) {
+    alert('Silme hatası: ' + error.message);
+    return;
+  }
+
+  loadImages();
+}
+</script>
+
+</body>
+</html>
