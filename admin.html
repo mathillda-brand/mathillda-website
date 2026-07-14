@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Mathillda - Yönetim Paneli</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <style>
     :root {
       --bg-color: #0d131a;
@@ -34,6 +35,198 @@
     }
     .form-group {
       margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: var(--accent-color);
+    }
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #2e3e52;
+      background-color: #0b1118;
+      color: #fff;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      background-color: var(--accent-color);
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .status {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 6px;
+      text-align: center;
+      display: none;
+    }
+    .status.success { background-color: #1b4d3e; color: #5effbc; display: block; }
+    .status.loading { background-color: #3b2c11; color: #ffd166; display: block; }
+    .status.error { background-color: #4a1d1d; color: #ff9e9e; display: block; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>MATHILLDA</h1>
+  <h2>Yeni Ürün Ekle</h2>
+  
+  <div id="statusBox" class="status"></div>
+
+  <div class="form-group">
+    <label for="category">Kategori</label>
+    <select id="category">
+      <option value="Çikolata">Çikolata (Chocolate)</option>
+      <option value="Pasta">Pasta (Cake)</option>
+    </select>
+  </div>
+
+  <div class="form-group">
+    <label for="name_tr">Ürün Adı (Türkçe)</label>
+    <input type="text" id="name_tr" placeholder="Örn: Safir Elmas Serisi">
+  </div>
+
+  <div class="form-group">
+    <label for="price">Fiyat (EUR)</label>
+    <input type="number" id="price" placeholder="Örn: 45">
+  </div>
+
+  <div class="form-group">
+    <label for="description_tr">Ürün Açıklaması (Türkçe)</label>
+    <textarea id="description_tr" rows="4" placeholder="Ürün özelliklerini yazın..."></textarea>
+  </div>
+
+  <div class="form-group">
+    <label for="image">Ürün Görseli</label>
+    <input type="file" id="image" accept="image/*">
+  </div>
+
+  <button onclick="saveProductAndTranslate()">Ürünü Çevir ve Kaydet</button>
+</div>
+
+<script>
+  const SUPABASE_URL = "https://olzohyonqioucwtnkfya.supabase.co"; 
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sem9oeW9ucWlvdWN3dG5rZnlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5MzQ2NzQsImV4cCI6MjA5OTUxMDY3NH0.uoW5CzM9HI-rJg4E0UMWj2QL6TbIAirRf1L31TZnl8Q"; 
+  const TRANSLATE_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/translate`;
+
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  function showStatus(message, type) {
+    const box = document.getElementById('statusBox');
+    box.className = `status ${type}`;
+    box.innerHTML = message;
+  }
+
+  // Supabase Edge fonksiyonunu kullanarak güvenli çeviri yapan fonksiyon
+  async function translateText(text, targetLang) {
+    if (!text) return "";
+    try {
+      const response = await fetch(TRANSLATE_FUNCTION_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${SUPABASE_ANON_KEY}`
+        },
+        body: JSON.stringify({ 
+          text: text, 
+          target_lang: targetLang 
+        })
+      });
+      
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || "Çeviri servisi hatası");
+      }
+      // Edge fonksiyonunuzun döndürdüğü olası veri yapılarını desteklemek için:
+      return data.text || data.translatedText || data.translated_text || data.translation || text;
+    } catch (err) {
+      console.error(`${targetLang} çeviri hatası:`, err);
+      return text; // Hata durumunda orijinal Türkçe metni koru
+    }
+  }
+
+  async function saveProductAndTranslate() {
+    const category = document.getElementById('category').value;
+    const name_tr = document.getElementById('name_tr').value;
+    const price = document.getElementById('price').value;
+    const description_tr = document.getElementById('description_tr').value;
+    const imageFile = document.getElementById('image').files[0];
+
+    if (!name_tr || !price || !description_tr || !imageFile) {
+      showStatus("Lütfen tüm alanları doldurun ve bir görsel seçin!", "error");
+      return;
+    }
+
+    showStatus("Görsel yükleniyor... Lütfen bekleyin.", "loading");
+
+    try {
+      // 1. Görseli Supabase Storage'a yükleme
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `product-images/${fileName}`;
+
+      const { data: uploadData, error: uploadError } = await supabaseClient.storage
+        .from('images')
+        .upload(filePath, imageFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabaseClient.storage
+        .from('images')
+        .getPublicUrl(filePath);
+
+      // 2. Edge Function ile dilleri sırayla çevirme
+      const languages = ['DE', 'EN', 'FR', 'IT', 'ES', 'RU', 'AR'];
+      const translations = {};
+
+      for (const lang of languages) {
+        showStatus(`Türkçe içerik ${lang} diline çevriliyor...`, "loading");
+        const lowerLang = lang.toLowerCase();
+        translations[`name_${lowerLang}`] = await translateText(name_tr, lang);
+        translations[`description_${lowerLang}`] = await translateText(description_tr, lang);
+      }
+
+      showStatus("Ürün veritabanına kaydediliyor...", "loading");
+
+      // 3. Çeviriler ve görsel URL'i ile birlikte ürünü doğrudan veritabanına ekleme
+      const { error: insertError } = await supabaseClient
+        .from('products')
+        .insert([{
+          category: category,
+          price: parseFloat(price),
+          image_url: publicUrl,
+          name_tr: name_tr,
+          description_tr: description_tr,
+          ...translations
+        }]);
+
+      if (insertError) throw insertError;
+
+      showStatus("Ürün başarıyla kaydedildi ve tüm dillere otomatik çevrildi! 🎉", "success");
+      
+      // Formu sıfırla
+      document.getElementById('name_tr').value = "";
+      document.getElementById('price').value = "";
+      document.getElementById('description_tr').value = "";
+      document.getElementById('image').value = "";
+
+    } catch (error) {
+      showStatus(`Sistem Hatası: ${error.message}`, "error");
+    }
+  }
+</script>
+</body>
+</html>
     }
     label {
       display: block;
