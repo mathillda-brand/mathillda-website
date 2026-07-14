@@ -1,319 +1,219 @@
 <!DOCTYPE html>
 <html lang="tr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Mathillda Admin</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<style>
-  * { box-sizing: border-box; }
-  body {
-    font-family: -apple-system, Segoe UI, Roboto, sans-serif;
-    background: #f5f2ee;
-    margin: 0;
-    padding: 16px;
-    color: #2a2622;
-  }
-  h1 { font-size: 20px; margin-bottom: 4px; }
-  h2 { font-size: 16px; margin-top: 32px; border-bottom: 1px solid #ddd; padding-bottom: 8px; }
-  .card {
-    background: #fff;
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 16px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-  }
-  label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 4px; }
-  input[type=text], input[type=number], input[type=password], textarea {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 15px;
-  }
-  textarea { min-height: 70px; resize: vertical; }
-  button {
-    background: #2a2622;
-    color: #fff;
-    border: none;
-    padding: 12px 18px;
-    border-radius: 6px;
-    font-size: 15px;
-    margin-top: 14px;
-    width: 100%;
-  }
-  button.secondary { background: #999; }
-  button.danger { background: #b03a2e; }
-  .status { font-size: 13px; margin-top: 8px; padding: 8px; border-radius: 6px; }
-  .status.ok { background: #e2f4e6; color: #256b37; }
-  .status.err { background: #fbe4e1; color: #92271b; }
-  .status.info { background: #eef2f7; color: #33506b; }
-  .thumb { width: 100%; max-width: 220px; border-radius: 6px; margin-top: 8px; }
-  .item {
-    border: 1px solid #eee;
-    border-radius: 8px;
-    padding: 12px;
-    margin-bottom: 10px;
-  }
-  .item img { width: 100%; border-radius: 6px; margin-bottom: 8px; }
-  .item .meta { font-size: 13px; color: #555; margin-bottom: 4px; }
-  #loginBox { max-width: 320px; margin: 60px auto; }
-  #appBox { display: none; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mathillda - Yönetim Paneli</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --bg-color: #0d131a;
+      --card-bg: #151f2b;
+      --text-color: #f1f5f9;
+      --accent-color: #d4af37;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      margin: 0;
+      padding: 15px;
+    }
+    .container {
+      max-width: 100%;
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      border: 1px solid rgba(212, 175, 55, 0.2);
+      box-sizing: border-box;
+    }
+    h1, h2 {
+      color: var(--accent-color);
+      text-align: center;
+      margin-top: 0;
+    }
+    .form-group {
+      margin-bottom: 15px;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-weight: 600;
+      color: var(--accent-color);
+    }
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%;
+      padding: 12px;
+      border-radius: 6px;
+      border: 1px solid #2e3e52;
+      background-color: #0b1118;
+      color: #fff;
+      font-size: 16px;
+      box-sizing: border-box;
+    }
+    button {
+      width: 100%;
+      padding: 14px;
+      background-color: var(--accent-color);
+      color: #000;
+      border: none;
+      border-radius: 6px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .status {
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 6px;
+      text-align: center;
+      display: none;
+    }
+    .status.success { background-color: #1b4d3e; color: #5effbc; display: block; }
+    .status.loading { background-color: #3b2c11; color: #ffd166; display: block; }
+    .status.error { background-color: #4a1d1d; color: #ff9e9e; display: block; }
+  </style>
 </head>
 <body>
 
-<div id="loginBox" class="card">
-  <h1>Mathillda Admin</h1>
-  <label>Şifre</label>
-  <input type="password" id="pwInput" placeholder="Şifre girin">
-  <button onclick="checkPassword()">Giriş Yap</button>
-  <div id="loginStatus"></div>
-</div>
+<div class="container">
+  <h1>MATHILLDA</h1>
+  <h2>Yeni Ürün Ekle</h2>
+  
+  <div id="statusBox" class="status"></div>
 
-<div id="appBox">
-  <h1>Mathillda Admin Panel</h1>
-
-  <h2>Yeni Görsel Ekle</h2>
-  <div class="card">
-    <label>Görsel Dosyası</label>
-    <input type="file" id="fileInput" accept="image/*">
-    <img id="preview" class="thumb" style="display:none;">
-
-    <label>Ürün Adı (Türkçe)</label>
-    <input type="text" id="nameTR" placeholder="Örn: Fındıklı Bonbon">
-
-    <label>Açıklama (Türkçe)</label>
-    <textarea id="contentTR" placeholder="Ürün açıklaması"></textarea>
-
-    <label>Fiyat (EUR)</label>
-    <input type="number" id="price" placeholder="0.00" step="0.01">
-
-    <label>Japonca Ad (manuel — DeepL desteklemiyor, opsiyonel)</label>
-    <input type="text" id="nameJA" placeholder="日本語名">
-    <label>Japonca Açıklama (opsiyonel)</label>
-    <textarea id="contentJA" placeholder="日本語の説明"></textarea>
-
-    <label>Arapça Ad (manuel — DeepL desteklemiyor, opsiyonel)</label>
-    <input type="text" id="nameAR" placeholder="الاسم بالعربية">
-    <label>Arapça Açıklama (opsiyonel)</label>
-    <textarea id="contentAR" placeholder="الوصف بالعربية"></textarea>
-
-    <button onclick="saveImage()">Kaydet ve Otomatik Çevir</button>
-    <div id="saveStatus"></div>
+  <div class="form-group">
+    <label for="category">Kategori</label>
+    <select id="category">
+      <option value="Çikolata">Çikolata (Chocolate)</option>
+      <option value="Pasta">Pasta (Cake)</option>
+    </select>
   </div>
 
-  <h2>Mevcut Görseller</h2>
-  <div id="imageList" class="card">Yükleniyor...</div>
+  <div class="form-group">
+    <label for="name_tr">Ürün Adı (Türkçe)</label>
+    <input type="text" id="name_tr" placeholder="Örn: Safir Elmas Serisi">
+  </div>
+
+  <div class="form-group">
+    <label for="price">Fiyat (EUR)</label>
+    <input type="number" id="price" placeholder="Örn: 45">
+  </div>
+
+  <div class="form-group">
+    <label for="description_tr">Ürün Açıklaması (Türkçe)</label>
+    <textarea id="description_tr" rows="4" placeholder="Ürün özelliklerini yazın..."></textarea>
+  </div>
+
+  <div class="form-group">
+    <label for="image">Ürün Görseli</label>
+    <input type="file" id="image" accept="image/*">
+  </div>
+
+  <button onclick="saveProductAndTranslate()">Ürünü Çevir ve Kaydet</button>
 </div>
 
 <script>
-const SUPABASE_URL = "https://olzohyonqioucwtnkfya.supabase.co";
-const SUPABASE_KEY = "sb_publishable_Q24NDXCNYJG87Io8Wb2l4g_fOvnaKJD";
-const TRANSLATE_FN = "https://olzohyonqioucwtnkfya.supabase.co/functions/v1/translate";
-const ADMIN_PASSWORD = "mathillda2026";
+  const SUPABASE_URL = "https://olzohyonqioucwtnkfya.supabase.co"; 
+  const SUPABASE_ANON_KEY = "Sb_publishable_Q24NDXCNYJG87Io8Wb2l4g_fOvnaKJD"; 
+  const DEEPL_API_KEY = "BURAYA_DEEPL_KEY_YAZIN"; // <-- Sadece DeepL Key'inizi buraya tırnakların içine yapıştırın
 
-let supabase = null;
+  const supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-function checkPassword() {
-  alert('Buton çalışıyor. Girilen: ' + document.getElementById('pwInput').value);
-  const val = document.getElementById('pwInput').value;
-  const statusEl = document.getElementById('loginStatus');
-  if (val === ADMIN_PASSWORD) {
-    if (!window.supabase) {
-      statusEl.innerHTML = '<div class="status err">Supabase kütüphanesi yüklenemedi. Sayfayı yenileyin.</div>';
-      return;
+  function showStatus(message, type) {
+    const box = document.getElementById('statusBox');
+    box.className = `status ${type}`;
+    box.innerHTML = message;
+  }
+
+  async function translateText(text, targetLang) {
+    if (!text) return "";
+    try {
+      const response = await fetch("https://api-free.deepl.com/v2/translate", {
+        method: "POST",
+        headers: {
+          "Authorization": `DeepL-Auth-Key ${DEEPL_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ text: [text], target_lang: targetLang })
+      });
+      const data = await response.json();
+      return data.translations[0].text;
+    } catch (err) {
+      console.error(err);
+      return "";
     }
-    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-    document.getElementById('loginBox').style.display = 'none';
-    document.getElementById('appBox').style.display = 'block';
-    loadImages();
-  } else {
-    statusEl.innerHTML = '<div class="status err">Şifre yanlış.</div>';
-  }
-}
-
-document.getElementById('fileInput').addEventListener('change', function(e) {
-  const file = e.target.files[0];
-  if (file) {
-    const preview = document.getElementById('preview');
-    preview.src = URL.createObjectURL(file);
-    preview.style.display = 'block';
-  }
-});
-
-async function translateText(text, targetLang) {
-  if (!text || text.trim() === '') return '';
-  try {
-    const res = await fetch(TRANSLATE_FN, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: text, target_lang: targetLang })
-    });
-    const data = await res.json();
-    if (!res.ok) {
-      console.error('Translate error:', data);
-      return '';
-    }
-    return data.translated_text || '';
-  } catch (err) {
-    console.error('Translate fetch error:', err);
-    return '';
-  }
-}
-
-async function saveImage() {
-  const statusEl = document.getElementById('saveStatus');
-  const fileInput = document.getElementById('fileInput');
-  const file = fileInput.files[0];
-  const nameTR = document.getElementById('nameTR').value.trim();
-  const contentTR = document.getElementById('contentTR').value.trim();
-  const priceVal = document.getElementById('price').value;
-  const nameJA = document.getElementById('nameJA').value.trim();
-  const contentJA = document.getElementById('contentJA').value.trim();
-  const nameAR = document.getElementById('nameAR').value.trim();
-  const contentAR = document.getElementById('contentAR').value.trim();
-
-  if (!file || !nameTR) {
-    statusEl.innerHTML = '<div class="status err">Görsel ve ürün adı (TR) zorunlu.</div>';
-    return;
   }
 
-  statusEl.innerHTML = '<div class="status info">Görsel yükleniyor...</div>';
+  async function saveProductAndTranslate() {
+    const category = document.getElementById('category').value;
+    const name_tr = document.getElementById('name_tr').value;
+    const price = document.getElementById('price').value;
+    const description_tr = document.getElementById('description_tr').value;
+    const imageFile = document.getElementById('image').files[0];
 
-  try {
-    const fileExt = file.name.split('.').pop();
-    const fileName = Date.now() + '.' + fileExt;
-
-    const { error: uploadError } = await supabase
-      .storage
-      .from('images')
-      .upload(fileName, file);
-
-    if (uploadError) {
-      statusEl.innerHTML = '<div class="status err">Yükleme hatası: ' + uploadError.message + '</div>';
+    if (!name_tr || !price || !description_tr || !imageFile) {
+      showStatus("Lütfen tüm alanları doldurun ve bir görsel seçin!", "error");
       return;
     }
 
-    const { data: urlData } = supabase.storage.from('images').getPublicUrl(fileName);
-    const publicUrl = urlData.publicUrl;
-
-    statusEl.innerHTML = '<div class="status info">Çevriliyor: Almanca...</div>';
-    const nameDE = await translateText(nameTR, 'DE');
-    const contentDE = await translateText(contentTR, 'DE');
-
-    statusEl.innerHTML = '<div class="status info">Çevriliyor: İngilizce...</div>';
-    const nameEN = await translateText(nameTR, 'EN');
-    const contentEN = await translateText(contentTR, 'EN');
-
-    statusEl.innerHTML = '<div class="status info">Çevriliyor: Fransızca...</div>';
-    const nameFR = await translateText(nameTR, 'FR');
-    const contentFR = await translateText(contentTR, 'FR');
-
-    statusEl.innerHTML = '<div class="status info">Çevriliyor: İtalyanca...</div>';
-    const nameIT = await translateText(nameTR, 'IT');
-    const contentIT = await translateText(contentTR, 'IT');
-
-    statusEl.innerHTML = '<div class="status info">Çevriliyor: İspanyolca...</div>';
-    const nameES = await translateText(nameTR, 'ES');
-    const contentES = await translateText(contentTR, 'ES');
-
-    statusEl.innerHTML = '<div class="status info">Çevriliyor: Rusça...</div>';
-    const nameRU = await translateText(nameTR, 'RU');
-    const contentRU = await translateText(contentTR, 'RU');
-
-    statusEl.innerHTML = '<div class="status info">Kaydediliyor...</div>';
-
-    const price = priceVal ? parseFloat(priceVal) : null;
-
-    const { error: insertError } = await supabase.from('images').insert({
-      url: publicUrl,
-      name_tr: nameTR, content_tr: contentTR,
-      name_de: nameDE, content_de: contentDE,
-      name_en: nameEN, content_en: contentEN,
-      name_fr: nameFR, content_fr: contentFR,
-      name_it: nameIT, content_it: contentIT,
-      name_es: nameES, content_es: contentES,
-      name_ru: nameRU, content_ru: contentRU,
-      name_ja: nameJA || null, content_ja: contentJA || null,
-      name_ar: nameAR || null, content_ar: contentAR || null,
-      price: price
-    });
-
-    if (insertError) {
-      statusEl.innerHTML = '<div class="status err">Kayıt hatası: ' + insertError.message + '</div>';
+    if (DEEPL_API_KEY === "BURAYA_DEEPL_KEY_YAZIN") {
+      showStatus("Lütfen kodun içindeki 'BURAYA_DEEPL_KEY_YAZIN' alanına kendi DeepL anahtarınızı yazın!", "error");
       return;
     }
 
-    statusEl.innerHTML = '<div class="status ok">Başarıyla kaydedildi ve 7 dile çevrildi.</div>';
+    showStatus("Görsel yükleniyor ve çeviriler yapılıyor... Lütfen bekleyin.", "loading");
 
-    document.getElementById('fileInput').value = '';
-    document.getElementById('preview').style.display = 'none';
-    document.getElementById('nameTR').value = '';
-    document.getElementById('contentTR').value = '';
-    document.getElementById('price').value = '';
-    document.getElementById('nameJA').value = '';
-    document.getElementById('contentJA').value = '';
-    document.getElementById('nameAR').value = '';
-    document.getElementById('contentAR').value = '';
+    try {
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `product-images/${fileName}`;
 
-    loadImages();
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('images')
+        .upload(filePath, imageFile);
 
-  } catch (err) {
-    statusEl.innerHTML = '<div class="status err">Beklenmeyen hata: ' + err.message + '</div>';
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('images')
+        .getPublicUrl(filePath);
+
+      const languages = ['DE', 'EN', 'FR', 'IT', 'ES', 'RU', 'AR'];
+      const translations = {};
+
+      for (const lang of languages) {
+        showStatus(`Türkçe içerik ${lang} diline çevriliyor...`, "loading");
+        const lowerLang = lang.toLowerCase();
+        translations[`name_${lowerLang}`] = await translateText(name_tr, lang);
+        translations[`description_${lowerLang}`] = await translateText(description_tr, lang);
+      }
+
+      const { error: insertError } = await supabase
+        .from('products')
+        .insert([{
+          category: category,
+          price: parseFloat(price),
+          image_url: publicUrl,
+          name_tr: name_tr,
+          description_tr: description_tr,
+          ...translations
+        }]);
+
+      if (insertError) throw insertError;
+
+      showStatus("Ürün başarıyla kaydedildi ve tüm dillere otomatik çevrildi! 🎉", "success");
+      
+      document.getElementById('name_tr').value = "";
+      document.getElementById('price').value = "";
+      document.getElementById('description_tr').value = "";
+      document.getElementById('image').value = "";
+
+    } catch (error) {
+      showStatus(`Sistem Hatası: ${error.message}`, "error");
+    }
   }
-}
-
-async function loadImages() {
-  const listEl = document.getElementById('imageList');
-  listEl.innerHTML = 'Yükleniyor...';
-
-  const { data, error } = await supabase
-    .from('images')
-    .select('*')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    listEl.innerHTML = '<div class="status err">Yükleme hatası: ' + error.message + '</div>';
-    return;
-  }
-
-  if (!data || data.length === 0) {
-    listEl.innerHTML = '<div class="status info">Henüz görsel eklenmedi.</div>';
-    return;
-  }
-
-  listEl.innerHTML = '';
-  data.forEach(function(item) {
-    const div = document.createElement('div');
-    div.className = 'item';
-    div.innerHTML =
-      '<img src="' + item.url + '">' +
-      '<div class="meta"><strong>' + (item.name_tr || '') + '</strong></div>' +
-      '<div class="meta">' + (item.content_tr || '') + '</div>' +
-      '<div class="meta">Fiyat: ' + (item.price !== null ? item.price + ' €' : '—') + '</div>' +
-      '<button class="danger" onclick="deleteImage(' + item.id + ', \'' + item.url + '\')">Sil</button>';
-    listEl.appendChild(div);
-  });
-}
-
-async function deleteImage(id, url) {
-  if (!confirm('Bu görseli silmek istediğine emin misin?')) return;
-
-  const fileName = url.split('/').pop();
-
-  await supabase.storage.from('images').remove([fileName]);
-
-  const { error } = await supabase.from('images').delete().eq('id', id);
-
-  if (error) {
-    alert('Silme hatası: ' + error.message);
-    return;
-  }
-
-  loadImages();
-}
 </script>
-
 </body>
 </html>
