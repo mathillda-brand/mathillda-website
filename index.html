@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mathillda — Akışkanlar Dinamiğiyle Şekillenen Çikolata Sanatı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;1,500&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    --ink:#0b0f14;
+    --panel:#12181f;
+    --panel2:#171f28;
+    --gold:#d4af37;
+    --gold-light:#f0d78c;
+    --cocoa:#3b2013;
+    --cream:#f4ead9;
+    --line:rgba(212,175,55,0.18);
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    margin:0;
+    background:var(--ink);
+    color:var(--cream);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{font-family:'Cormorant Garamond',serif;font-weight:600;margin:0;}
+  .mono{font-family:'JetBrains Mono',monospace;}
+  a{color:inherit;}
+  [dir="rtl"] .lang-select{direction:ltr;}
+
+  /* HEADER */
+  header{
+    position:fixed; top:0; left:0; right:0; z-index:50;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 20px;
+    background:linear-gradient(to bottom, rgba(11,15,20,0.95), rgba(11,15,20,0));
+  }
+  .wordmark{font-family:'Cormorant Garamond',serif; font-size:22px; letter-spacing:3px; color:var(--gold-light);}
+  select.lang-select{
+    background:var(--panel); color:var(--cream);
+    border:1px solid var(--line); border-radius:6px;
+    padding:6px 10px; font-family:'JetBrains Mono',monospace; font-size:13px;
+  }
+
+  /* HERO */
+  .hero{
+    position:relative; height:100svh; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; text-align:center;
+    overflow:hidden; padding:0 20px;
+  }
+  #marbleCanvas{position:absolute; inset:0; width:100%; height:100%; opacity:0.55;}
+  .hero-content{position:relative; z-index:2; max-width:600px;}
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:2px;
+    color:var(--gold); opacity:0.85; margin-bottom:18px;
+  }
+  .hero h1{font-size:clamp(32px,7vw,52px); line-height:1.15; color:var(--cream);}
+  .hero p{margin-top:18px; font-size:16px; color:#c8bfae; line-height:1.6;}
+  .scroll-cue{
+    position:absolute; bottom:28px; left:50%; transform:translateX(-50%);
+    width:1px; height:36px; background:var(--gold); opacity:0.5;
+    animation:pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:0.15;}50%{opacity:0.6;}}
+
+  /* ABOUT */
+  section{padding:70px 20px; max-width:720px; margin:0 auto;}
+  .about-title{color:var(--gold); font-size:14px; letter-spacing:3px; text-transform:uppercase; font-family:'JetBrains Mono',monospace; margin-bottom:16px; text-align:center;}
+  .about-text{font-size:18px; line-height:1.85; color:#e4dbc9; text-align:center;}
+
+  /* CATEGORY TABS */
+  .tabs-nav{
+    position:sticky; top:0; z-index:30; display:flex; justify-content:center; gap:6px;
+    background:var(--ink); padding:14px 20px; border-bottom:1px solid var(--line);
+  }
+  .tab-pill{
+    background:transparent; border:1px solid var(--line); color:#a89b7c;
+    padding:9px 18px; border-radius:20px; font-size:14px; cursor:pointer;
+    font-family:'Inter',sans-serif;
+  }
+  .tab-pill.active{background:var(--gold); color:#1a1206; border-color:var(--gold); font-weight:600;}
+
+  /* GALLERY */
+  .gallery-wrap{max-width:960px; margin:0 auto; padding:40px 16px 70px;}
+  .grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:16px;}
+  .product-card{
+    background:var(--panel); border:1px solid var(--line); border-radius:10px;
+    overflow:hidden; text-align:left;
+  }
+  .product-card img{width:100%; aspect-ratio:1/1; object-fit:cover; display:block;}
+  .product-card .pc-body{padding:12px;}
+  .product-card .pc-name{font-family:'Cormorant Garamond',serif; font-size:17px; color:var(--cream);}
+  .product-card .pc-price{font-family:'JetBrains Mono',monospace; color:var(--gold); font-size:13px; margin-top:6px;}
+  .empty-msg,.loading-msg{grid-column:1/-1; text-align:center; color:#7a705c; padding:30px 0; font-size:14px;}
+
+  /* CONTACT */
+  .contact-section{text-align:center; border-top:1px solid var(--line);}
+  .contact-buttons{display:flex; flex-direction:column; gap:12px; max-width:340px; margin:26px auto 0;}
+  .btn{
+    display:block; padding:14px; border-radius:8px; font-weight:600; font-size:15px;
+    text-decoration:none;
+  }
+  .btn-whatsapp{background:#1fae5c; color:#fff;}
+  .btn-email{background:var(--panel2); color:var(--cream); border:1px solid var(--line);}
+  .social-row{display:flex; justify-content:center; gap:20px; margin-top:22px; font-size:14px;}
+  .social-row a{color:#a89b7c; text-decoration:none; border-bottom:1px solid transparent;}
+  .social-row a:hover{border-color:var(--gold); color:var(--gold);}
+
+  footer{text-align:center; padding:26px 20px; font-size:12px; color:#5c5443; font-family:'JetBrains Mono',monospace; letter-spacing:1px;}
+
+  /* Lightbox */
+  #lightbox{
+    position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:100;
+    display:none; align-items:center; justify-content:center; padding:20px;
+  }
+  #lightbox img{max-width:100%; max-height:80vh; border-radius:8px;}
+  #lightbox .lb-close{position:absolute; top:20px; right:24px; color:#fff; font-size:28px; background:none; border:none;}
+
+  @media (prefers-reduced-motion: reduce){
+    #marbleCanvas{display:none;}
+    .scroll-cue{animation:none;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wordmark">MATHILLDA</div>
+  <select id="langSelect" class="lang-select" onchange="setLanguage(this.value)">
+    <option value="tr">TR</option>
+    <option value="de">DE</option>
+    <option value="en">EN</option>
+    <option value="fr">FR</option>
+    <option value="it">IT</option>
+    <option value="es">ES</option>
+    <option value="ru">RU</option>
+    <option value="ar">AR</option>
+  </select>
+</header>
+
+<div class="hero">
+  <canvas id="marbleCanvas"></canvas>
+  <div class="hero-content">
+    <div class="eyebrow">φ = 1.6180339887...</div>
+    <h1 id="heroTitle"></h1>
+    <p id="heroSubtitle"></p>
+  </div>
+  <div class="scroll-cue"></div>
+</div>
+
+<section>
+  <div class="about-title" id="aboutTitle"></div>
+  <div class="about-text" id="aboutText"></div>
+</section>
+
+<div class="tabs-nav">
+  <button class="tab-pill active" data-cat="cikolata" onclick="setCategory('cikolata')" id="tabCikolata"></button>
+  <button class="tab-pill" data-cat="pasta" onclick="setCategory('pasta')" id="tabPasta"></button>
+  <button class="tab-pill" data-cat="tek_pasta" onclick="setCategory('tek_pasta')" id="tabTekPasta"></button>
+</div>
+
+<div class="gallery-wrap">
+  <div class="grid" id="galleryGrid">
+    <div class="loading-msg" id="galleryLoading"></div>
+  </div>
+</div>
+
+<section class="contact-section">
+  <div class="about-title" id="contactTitle"></div>
+  <p class="about-text" id="contactText" style="font-size:16px;"></p>
+  <div class="contact-buttons">
+    <a href="#" id="whatsappBtn" class="btn btn-whatsapp" target="_blank" rel="noopener"></a>
+    <a href="#" id="emailBtn" class="btn btn-email"></a>
+  </div>
+  <div class="social-row" id="socialRow"></div>
+</section>
+
+<footer id="footerText"></footer>
+
+<div id="lightbox" onclick="closeLightbox()">
+  <button class="lb-close">&times;</button>
+  <img id="lightboxImg" src="" alt="">
+</div>
+
+<script>
+  const SUPABASE_URL = "https://olzohyonqioucwtnkfya.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9sem9oeW9ucWlvdWN3dG5rZnlhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODM5MzQ2NzQsImV4cCI6MjA5OTUxMDY3NH0.uoW5CzM9HI-rJg4E0UMWj2QL6TbIAirRf1L31TZnl8Q";
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const CATEGORY_ORDER = ['cikolata','pasta','tek_pasta'];
+  let currentLang = 'tr';
+  let currentCategory = 'cikolata';
+  let allProducts = [];
+
+  const I18N = {
+    tr:{ nav_chocolate:"Çikolata", nav_cake:"Pasta", nav_single_cake:"Tek Pasta",
+      hero_title:"Akışkanlar dinamiğiyle şekillenen çikolata sanatı",
+      hero_subtitle:"Her parça, matematiksel hassasiyetle tasarlanmış bir sanat eseridir.",
+      about_title:"Felsefe",
+      about_text:"Kırk yılı aşkın zanaat deneyimi ve Lomonosov Moskova Devlet Üniversitesi'nden gelen matematik bilgisiyle Mathillda, çikolataya yeni bir dil kazandırır. Renk oranı, kırılma açısı ve akış hızının hassas dengesinden doğan mermer desenler, her ürünü kendine özgü bir esere dönüştürür.",
+      contact_title:"İletişim", contact_text:"Sipariş ve özel tasarım talepleriniz için bize ulaşın.",
+      whatsapp_btn:"WhatsApp ile Yaz", email_btn:"E-posta Gönder",
+      loading_text:"Yükleniyor...", empty_text:"Bu kategoride henüz ürün yok.",
+      footer_text:"Mathillda — Konstanz" },
+    de:{ nav_chocolate:"Schokolade", nav_cake:"Torte", nav_single_cake:"Einzeltorte",
+      hero_title:"Schokoladenkunst, geformt von der Dynamik der Flüssigkeiten",
+      hero_subtitle:"Jedes Stück ist ein Kunstwerk, gestaltet mit mathematischer Präzision.",
+      about_title:"Philosophie",
+      about_text:"Mit über vierzig Jahren Handwerkserfahrung und mathematischem Wissen von der Lomonossow-Universität Moskau verleiht Mathillda der Schokolade eine neue Sprache. Die Marmormuster, geboren aus dem präzisen Zusammenspiel von Farbverhältnis, Brechungswinkel und Fließgeschwindigkeit, machen jedes Stück zu einem einzigartigen Werk.",
+      contact_title:"Kontakt", contact_text:"Für Bestellungen und individuelle Anfragen kontaktieren Sie uns gerne.",
+      whatsapp_btn:"Auf WhatsApp schreiben", email_btn:"E-Mail senden",
+      loading_text:"Wird geladen...", empty_text:"In dieser Kategorie noch keine Produkte.",
+      footer_text:"Mathillda — Konstanz" },
+    en:{ nav_chocolate:"Chocolate", nav_cake:"Cake", nav_single_cake:"Single Cake",
+      hero_title:"Chocolate art shaped by the dynamics of fluids",
+      hero_subtitle:"Every piece is a work of art, designed with mathematical precision.",
+      about_title:"Philosophy",
+      about_text:"With over forty years of craft experience and a mathematics background from Lomonosov Moscow State University, Mathillda gives chocolate a new language. The marble patterns, born from the precise balance of color ratio, refraction angle, and flow speed, turn every piece into a singular work.",
+      contact_title:"Contact", contact_text:"Reach out for orders and custom design requests.",
+      whatsapp_btn:"Message on WhatsApp", email_btn:"Send an Email",
+      loading_text:"Loading...", empty_text:"No products in this category yet.",
+      footer_text:"Mathillda — Konstanz" },
+    fr:{ nav_chocolate:"Chocolat", nav_cake:"Gâteau", nav_single_cake:"Gâteau Individuel",
+      hero_title:"Un art du chocolat façonné par la dynamique des fluides",
+      hero_subtitle:"Chaque pièce est une œuvre d'art conçue avec une précision mathématique.",
+      about_title:"Philosophie",
+      about_text:"Avec plus de quarante ans d'expérience artisanale et une formation en mathématiques à l'Université d'État Lomonossov de Moscou, Mathillda offre au chocolat un nouveau langage. Les motifs marbrés, nés de l'équilibre précis entre le ratio des couleurs, l'angle de réfraction et la vitesse d'écoulement, font de chaque pièce une œuvre unique.",
+      contact_title:"Contact", contact_text:"Contactez-nous pour vos commandes et demandes de créations personnalisées.",
+      whatsapp_btn:"Écrire sur WhatsApp", email_btn:"Envoyer un Email",
+      loading_text:"Chargement...", empty_text:"Aucun produit dans cette catégorie pour le moment.",
+      footer_text:"Mathillda — Konstanz" },
+    it:{ nav_chocolate:"Cioccolato", nav_cake:"Torta", nav_single_cake:"Torta Singola",
+      hero_title:"Arte del cioccolato plasmata dalla dinamica dei fluidi",
+      hero_subtitle:"Ogni pezzo è un'opera d'arte, disegnata con precisione matematica.",
+      about_title:"Filosofia",
+      about_text:"Con oltre quarant'anni di esperienza artigianale e una formazione in matematica presso l'Università Statale Lomonosov di Mosca, Mathillda dona al cioccolato un nuovo linguaggio. I motivi marmorizzati, nati dall'equilibrio preciso tra rapporto cromatico, angolo di rifrazione e velocità di flusso, rendono ogni pezzo un'opera unica.",
+      contact_title:"Contatti", contact_text:"Contattaci per ordini e richieste di design personalizzato.",
+      whatsapp_btn:"Scrivi su WhatsApp", email_btn:"Invia un'Email",
+      loading_text:"Caricamento...", empty_text:"Ancora nessun prodotto in questa categoria.",
+      footer_text:"Mathillda — Konstanz" },
+    es:{ nav_chocolate:"Chocolate", nav_cake:"Tarta", nav_single_cake:"Tarta Individual",
+      hero_title:"Arte del chocolate moldeado por la dinámica de fluidos",
+      hero_subtitle:"Cada pieza es una obra de arte, diseñada con precisión matemática.",
+      about_title:"Filosofía",
+      about_text:"Con más de cuarenta años de experiencia artesanal y una formación en matemáticas de la Universidad Estatal Lomonósov de Moscú, Mathillda le da al chocolate un nuevo lenguaje. Los patrones de mármol, nacidos del equilibrio preciso entre la proporción de color, el ángulo de refracción y la velocidad de flujo, convierten cada pieza en una obra singular.",
+      contact_title:"Contacto", contact_text:"Escríbenos para pedidos y solicitudes de diseño personalizado.",
+      whatsapp_btn:"Escribir por WhatsApp", email_btn:"Enviar un Correo",
+      loading_text:"Cargando...", empty_text:"Aún no hay productos en esta categoría.",
+      footer_text:"Mathillda — Konstanz" },
+    ru:{ nav_chocolate:"Шоколад", nav_cake:"Торт", nav_single_cake:"Порционный торт",
+      hero_title:"Искусство шоколада, рождённое динамикой жидкостей",
+      hero_subtitle:"Каждое изделие — произведение искусства, созданное с математической точностью.",
+      about_title:"Философия",
+      about_text:"Более сорока лет ремесленного опыта и математическое образование, полученное в МГУ имени Ломоносова, позволяют Mathillda говорить с шоколадом на новом языке. Мраморные узоры, рождённые точным балансом цветовых пропорций, угла преломления и скорости потока, превращают каждое изделие в единственное в своём роде произведение.",
+      contact_title:"Контакты", contact_text:"Свяжитесь с нами по вопросам заказа и индивидуального дизайна.",
+      whatsapp_btn:"Написать в WhatsApp", email_btn:"Отправить письмо",
+      loading_text:"Загрузка...", empty_text:"В этой категории пока нет изделий.",
+      footer_text:"Mathillda — Констанц" },
+    ar:{ nav_chocolate:"شوكولاتة", nav_cake:"كعكة", nav_single_cake:"كعكة فردية",
+      hero_title:"فن الشوكولاتة الذي تشكّله ديناميكا الموائع",
+      hero_subtitle:"كل قطعة عمل فني مصمم بدقة رياضية.",
+      about_title:"الفلسفة",
+      about_text:"بخبرة حرفية تتجاوز أربعين عامًا وخلفية رياضية من جامعة موسكو الحكومية لومونوسوف، تمنح Mathillda الشوكولاتة لغة جديدة. الأنماط الرخامية، المولودة من التوازن الدقيق بين نسبة الألوان وزاوية الانكسار وسرعة التدفق، تحوّل كل قطعة إلى عمل فريد من نوعه.",
+      contact_title:"تواصل معنا", contact_text:"تواصل معنا للطلبات وطلبات التصميم الخاص.",
+      whatsapp_btn:"راسلنا عبر واتساب", email_btn:"إرسال بريد إلكتروني",
+      loading_text:"جارٍ التحميل...", empty_text:"لا توجد منتجات في هذه الفئة بعد.",
+      footer_text:"Mathillda — كونستانز" }
+  };
+
+  function applyI18n(){
+    const t = I18N[currentLang];
+    document.documentElement.setAttribute('lang', currentLang);
+    document.documentElement.setAttribute('dir', currentLang === 'ar' ? 'rtl' : 'ltr');
+    document.getElementById('heroTitle').textContent = t.hero_title;
+    document.getElementById('heroSubtitle').textContent = t.hero_subtitle;
+    document.getElementById('aboutTitle').textContent = t.about_title;
+    document.getElementById('aboutText').textContent = t.about_text;
+    document.getElementById('contactTitle').textContent = t.contact_title;
+    document.getElementById('contactText').textContent = t.contact_text;
+    document.getElementById('whatsappBtn').textContent = t.whatsapp_btn;
+    document.getElementById('emailBtn').textContent = t.email_btn;
+    document.getElementById('footerText').textContent = t.footer_text;
+    document.getElementById('tabCikolata').textContent = t.nav_chocolate;
+    document.getElementById('tabPasta').textContent = t.nav_cake;
+    document.getElementById('tabTekPasta').textContent = t.nav_single_cake;
+    document.getElementById('galleryLoading').textContent = t.loading_text;
+  }
+
+  function setLanguage(lang){
+    currentLang = lang;
+    applyI18n();
+    renderGallery();
+  }
+
+  function setCategory(cat){
+    currentCategory = cat;
+    document.querySelectorAll('.tab-pill').forEach(el => el.classList.remove('active'));
+    document.getElementById(
+      cat === 'cikolata' ? 'tabCikolata' : cat === 'pasta' ? 'tabPasta' : 'tabTekPasta'
+    ).classList.add('active');
+    renderGallery();
+  }
+
+  async function loadProducts(){
+    const { data, error } = await supabaseClient.from('products').select('*').order('created_at', { ascending:false });
+    if(!error && data) allProducts = data;
+    renderGallery();
+  }
+
+  function renderGallery(){
+    const grid = document.getElementById('galleryGrid');
+    const t = I18N[currentLang];
+    const items = allProducts.filter(p => p.category === currentCategory);
+    if(items.length === 0){
+      grid.innerHTML = `<div class="empty-msg">${t.empty_text}</div>`;
+      return;
+    }
+    grid.innerHTML = items.map(p => {
+      const name = p[`name_${currentLang}`] || p.name_tr;
+      return `
+        <div class="product-card">
+          <img src="${p.image_url}" alt="${name}" onclick="openLightbox('${p.image_url}')">
+          <div class="pc-body">
+            <div class="pc-name">${name}</div>
+            <div class="pc-price mono">${p.price} EUR</div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  function openLightbox(url){
+    document.getElementById('lightboxImg').src = url;
+    document.getElementById('lightbox').style.display = 'flex';
+  }
+  function closeLightbox(){
+    document.getElementById('lightbox').style.display = 'none';
+  }
+
+  async function loadSettings(){
+    const { data, error } = await supabaseClient.from('settings').select('*').eq('id', 1).single();
+    if(error || !data) return;
+    if(data.whatsapp_number){
+      const clean = data.whatsapp_number.replace(/[^0-9]/g,'');
+      document.getElementById('whatsappBtn').href = `https://wa.me/${clean}`;
+    }
+    if(data.contact_email){
+      document.getElementById('emailBtn').href = `mailto:${data.contact_email}`;
+    }
+    const social = document.getElementById('socialRow');
+    let links = '';
+    if(data.instagram_url) links += `<a href="${data.instagram_url}" target="_blank" rel="noopener">Instagram</a>`;
+    if(data.facebook_url) links += `<a href="${data.facebook_url}" target="_blank" rel="noopener">Facebook</a>`;
+    social.innerHTML = links;
+  }
+
+  /* Marble / fluid dynamics hero canvas */
+  (function initMarble(){
+    const canvas = document.getElementById('marbleCanvas');
+    const ctx = canvas.getContext('2d');
+    let w, h;
+    function resize(){
+      w = canvas.width = canvas.offsetWidth;
+      h = canvas.height = canvas.offsetHeight;
+    }
+    resize();
+    window.addEventListener('resize', resize);
+
+    const blobs = Array.from({length: 5}, (_, i) => ({
+      baseX: 0.2 + (i * 0.15),
+      baseY: 0.3 + (i % 2 === 0 ? 0.15 : -0.1),
+      r: 0.35 + i * 0.05,
+      speed: 0.00025 + i * 0.00008,
+      phase: i * 1.7,
+      color: i % 2 === 0 ? '212,175,55' : '59,32,19'
+    }));
+
+    function draw(time){
+      ctx.clearRect(0,0,w,h);
+      blobs.forEach(b => {
+        const x = (b.baseX + 0.06 * Math.sin(time * b.speed + b.phase)) * w;
+        const y = (b.baseY + 0.06 * Math.cos(time * b.speed * 1.3 + b.phase)) * h;
+        const r = b.r * Math.max(w,h);
+        const grad = ctx.createRadialGradient(x, y, 0, x, y, r);
+        grad.addColorStop(0, `rgba(${b.color},0.35)`);
+        grad.addColorStop(1, `rgba(${b.color},0)`);
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(x, y, r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      requestAnimationFrame(draw);
+    }
+    if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+      requestAnimationFrame(draw);
+    }
+  })();
+
+  applyI18n();
+  loadProducts();
+  loadSettings();
+</script>
+</body>
+</html>
